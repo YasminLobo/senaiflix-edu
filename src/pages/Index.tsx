@@ -1,6 +1,9 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import VideoRow from "@/components/VideoRow";
+import { useAuth } from "@/contexts/AuthContext";
 
 const mockVideos = [
   { id: "1", title: "Matemática Básica", thumbnail: "", ageRating: "Infantil" },
@@ -11,6 +14,19 @@ const mockVideos = [
 ];
 
 const Index = () => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate("/auth");
+    }
+  }, [isAuthenticated, navigate]);
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
