@@ -91,20 +91,21 @@ export const CodeAnimation = () => {
   }, []);
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.08]">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
       {fallingCodes.map((code) => (
         <div
           key={code.id}
-          className="absolute font-mono text-xs md:text-sm text-primary whitespace-nowrap transition-opacity duration-1000"
+          className="absolute font-mono text-sm md:text-base text-primary whitespace-nowrap transition-opacity duration-1000"
           style={{
             left: `${code.x}%`,
             top: `${code.y}%`,
             opacity: code.y > 5 ? 1 : 0,
+            textShadow: '0 0 10px hsl(var(--primary) / 0.5)',
           }}
         >
-          <code>{code.displayedText}</code>
+          <code className="font-semibold">{code.displayedText}</code>
           {code.currentChar < code.text.length && code.y > 5 && (
-            <span className="animate-pulse">|</span>
+            <span className="animate-pulse text-primary">|</span>
           )}
         </div>
       ))}
