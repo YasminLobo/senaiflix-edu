@@ -1,66 +1,113 @@
 import { useEffect, useState } from "react";
 
-const codeSnippets = [
-  `const initializeStream = async () => {
-  const video = document.querySelector('video');
-  const source = video.addSourceBuffer('video/mp4');
-  await source.appendBuffer(videoData);
-  video.play();
-}`,
-  `function authenticateUser(email, password) {
-  const hash = crypto.createHash('sha256');
-  hash.update(password);
-  return validateCredentials(email, hash);
-}`,
-  `class VideoPlayer {
-  constructor(element) {
-    this.element = element;
-    this.hls = new Hls();
-  }
-  
-  loadStream(url) {
-    this.hls.loadSource(url);
-    this.hls.attachMedia(this.element);
-  }
-}`,
-  `const fetchCatalog = async (userType) => {
-  const response = await fetch('/api/videos', {
-    headers: { 'Authorization': token }
-  });
-  return response.json();
-}`,
+const codeLines = [
+  "const player = new VideoPlayer();",
+  "async function loadVideo(url) {",
+  "  const stream = await fetch(url);",
+  "  return stream.blob();",
+  "}",
+  "function authenticate(user) {",
+  "  const token = jwt.sign(user);",
+  "  return token;",
+  "}",
+  "class HLSPlayer extends Player {",
+  "  loadSource(url) {",
+  "    this.hls.attachMedia(video);",
+  "  }",
+  "}",
+  "const videoData = await fetchCatalog();",
+  "if (user.authenticated) {",
+  "  player.play();",
+  "}",
+  "const buffer = video.addSourceBuffer();",
+  "await buffer.appendBuffer(data);",
+  "response.json({ success: true });",
+  "const hash = crypto.createHash('sha256');",
+  "return validateCredentials(email);",
+  "localStorage.setItem('user', JSON.stringify(data));",
+  "const users = JSON.parse(localStorage.getItem('users'));",
 ];
 
+interface FallingCode {
+  id: number;
+  text: string;
+  x: number;
+  y: number;
+  speed: number;
+  displayedText: string;
+  currentChar: number;
+}
+
 export const CodeAnimation = () => {
-  const [displayedCode, setDisplayedCode] = useState("");
-  const [currentSnippet, setCurrentSnippet] = useState(0);
-  const [currentChar, setCurrentChar] = useState(0);
+  const [fallingCodes, setFallingCodes] = useState<FallingCode[]>([]);
 
   useEffect(() => {
-    const snippet = codeSnippets[currentSnippet];
+    const createNewCode = () => {
+      const newCode: FallingCode = {
+        id: Date.now() + Math.random(),
+        text: codeLines[Math.floor(Math.random() * codeLines.length)],
+        x: Math.random() * 100,
+        y: -10,
+        speed: 0.5 + Math.random() * 1,
+        displayedText: "",
+        currentChar: 0,
+      };
+      setFallingCodes((prev) => [...prev.slice(-8), newCode]);
+    };
+
+    const interval = setInterval(createNewCode, 2000);
+    createNewCode();
+    createNewCode();
     
-    if (currentChar < snippet.length) {
-      const timeout = setTimeout(() => {
-        setDisplayedCode(snippet.slice(0, currentChar + 1));
-        setCurrentChar(currentChar + 1);
-      }, 30);
-      return () => clearTimeout(timeout);
-    } else {
-      const timeout = setTimeout(() => {
-        setCurrentChar(0);
-        setDisplayedCode("");
-        setCurrentSnippet((currentSnippet + 1) % codeSnippets.length);
-      }, 3000);
-      return () => clearTimeout(timeout);
-    }
-  }, [currentChar, currentSnippet]);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const animationFrame = setInterval(() => {
+      setFallingCodes((prev) =>
+        prev
+          .map((code) => {
+            const newY = code.y + code.speed;
+            let newDisplayedText = code.displayedText;
+            let newCurrentChar = code.currentChar;
+
+            if (code.currentChar < code.text.length && newY > 5) {
+              newDisplayedText = code.text.slice(0, code.currentChar + 1);
+              newCurrentChar = code.currentChar + 1;
+            }
+
+            return {
+              ...code,
+              y: newY,
+              displayedText: newDisplayedText,
+              currentChar: newCurrentChar,
+            };
+          })
+          .filter((code) => code.y < 110)
+      );
+    }, 50);
+
+    return () => clearInterval(animationFrame);
+  }, []);
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-10">
-      <pre className="text-primary font-mono text-sm md:text-base p-8 leading-relaxed">
-        <code>{displayedCode}</code>
-        <span className="animate-pulse">|</span>
-      </pre>
+    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.08]">
+      {fallingCodes.map((code) => (
+        <div
+          key={code.id}
+          className="absolute font-mono text-xs md:text-sm text-primary whitespace-nowrap transition-opacity duration-1000"
+          style={{
+            left: `${code.x}%`,
+            top: `${code.y}%`,
+            opacity: code.y > 5 ? 1 : 0,
+          }}
+        >
+          <code>{code.displayedText}</code>
+          {code.currentChar < code.text.length && code.y > 5 && (
+            <span className="animate-pulse">|</span>
+          )}
+        </div>
+      ))}
     </div>
   );
 };
