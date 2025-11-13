@@ -13,6 +13,7 @@ const VideoRow = ({ title, videos }: VideoRowProps) => {
         {videos.map((video) => (
           <VideoCard
             key={video.id}
+            id={video.id}
             title={video.title}
             thumbnail={video.thumbnail}
             ageRating={video.ageRating}

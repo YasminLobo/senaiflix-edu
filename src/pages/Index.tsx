@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import VideoRow from "@/components/VideoRow";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePlan } from "@/contexts/PlanContext";
 
 const mockVideos = [
   { id: "1", title: "Matemática Básica", thumbnail: "", ageRating: "Infantil" },
@@ -15,7 +16,17 @@ const mockVideos = [
 
 const Index = () => {
   const { isAuthenticated } = useAuth();
+  const { ratings } = usePlan();
   const navigate = useNavigate();
+
+  const topRatedVideos = mockVideos
+    .map(video => ({
+      ...video,
+      rating: ratings.find(r => r.videoId === video.id)?.rating || 0
+    }))
+    .filter(v => v.rating > 0)
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, 5);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -31,6 +42,9 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <Hero />
+      {topRatedVideos.length > 0 && (
+        <VideoRow title="Melhor Avaliados por Você" videos={topRatedVideos} />
+      )}
       <VideoRow title="Continue Assistindo" videos={mockVideos.slice(0, 3)} />
       <VideoRow title="Conteúdo Infantil" videos={mockVideos.filter(v => v.ageRating === "Infantil")} />
       <VideoRow title="Conteúdo Jovem" videos={mockVideos.filter(v => v.ageRating === "Jovem")} />
