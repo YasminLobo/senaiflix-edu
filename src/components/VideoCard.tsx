@@ -4,6 +4,7 @@ import { Download, Clock, Star } from "lucide-react";
 import { usePlan } from "@/contexts/PlanContext";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface VideoCardProps {
   id: string;
@@ -13,10 +14,15 @@ interface VideoCardProps {
 }
 
 const VideoCard = ({ id, title, thumbnail, ageRating }: VideoCardProps) => {
+  const navigate = useNavigate();
   const { addToWatchLater, removeFromWatchLater, watchLater, rateVideo, ratings, downloadVideo } = usePlan();
   const { toast } = useToast();
   const [rating, setRating] = useState(ratings.find(r => r.videoId === id)?.rating || 0);
   const isInWatchLater = watchLater.some(v => v.id === id);
+
+  const handleCardClick = () => {
+    navigate(`/video/${id}`);
+  };
 
   const handleWatchLater = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -63,7 +69,7 @@ const VideoCard = ({ id, title, thumbnail, ageRating }: VideoCardProps) => {
   };
 
   return (
-    <Card className="group relative overflow-hidden rounded-md transition-all duration-300 hover:scale-105 hover:ring-2 hover:ring-primary cursor-pointer bg-card border-border">
+    <Card className="group relative overflow-hidden rounded-md transition-all duration-300 hover:scale-105 hover:ring-2 hover:ring-primary cursor-pointer bg-card border-border" onClick={handleCardClick}>
       <div className="aspect-video bg-secondary flex items-center justify-center">
         <span className="text-muted-foreground text-sm">{ageRating}</span>
       </div>

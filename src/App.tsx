@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Plans from "./pages/Plans";
 import WatchLater from "./pages/WatchLater";
 import MyRatings from "./pages/MyRatings";
+import VideoDetail from "./pages/VideoDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
               <Route path="/plans" element={<Plans />} />
               <Route path="/watch-later" element={<WatchLater />} />
               <Route path="/my-ratings" element={<MyRatings />} />
+              <Route path="/video/:id" element={<VideoDetail />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
