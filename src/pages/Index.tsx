@@ -12,6 +12,8 @@ const mockVideos = [
   { id: "3", title: "História do Brasil", thumbnail: "", ageRating: "Jovem" },
   { id: "4", title: "Física Moderna", thumbnail: "", ageRating: "Adulto" },
   { id: "5", title: "Inglês Avançado", thumbnail: "", ageRating: "Adulto" },
+  { id: "6", title: "Programação Python - Interativo", thumbnail: "", ageRating: "Adulto" },
+  { id: "7", title: "JavaScript Básico - Interativo", thumbnail: "", ageRating: "Jovem" },
 ];
 
 const Index = () => {
@@ -45,6 +47,7 @@ const Index = () => {
       {topRatedVideos.length > 0 && (
         <VideoRow title="Melhor Avaliados por Você" videos={topRatedVideos} />
       )}
+      <VideoRow title="Aprendizado Interativo" videos={mockVideos.filter(v => v.id === "6" || v.id === "7")} />
       <VideoRow title="Continue Assistindo" videos={mockVideos.slice(0, 3)} />
       <VideoRow title="Conteúdo Infantil" videos={mockVideos.filter(v => v.ageRating === "Infantil")} />
       <VideoRow title="Conteúdo Jovem" videos={mockVideos.filter(v => v.ageRating === "Jovem")} />

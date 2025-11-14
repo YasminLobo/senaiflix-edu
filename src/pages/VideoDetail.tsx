@@ -1,18 +1,68 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Play, Download, Clock, Star, ArrowLeft, Plus, Check } from "lucide-react";
+import { Play, Download, Clock, Star, ArrowLeft, Plus, Check, Code } from "lucide-react";
 import { usePlan } from "@/contexts/PlanContext";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import VideoRow from "@/components/VideoRow";
+import InteractiveVideoPlayer from "@/components/InteractiveVideoPlayer";
 
 const mockVideos = [
-  { id: "1", title: "Matemática Básica", thumbnail: "", ageRating: "Infantil", description: "Aprenda os fundamentos da matemática de forma divertida e interativa.", duration: "45min", year: "2024" },
-  { id: "2", title: "Ciências Naturais", thumbnail: "", ageRating: "Infantil", description: "Explore o mundo natural e descubra as maravilhas da ciência.", duration: "38min", year: "2024" },
-  { id: "3", title: "História do Brasil", thumbnail: "", ageRating: "Jovem", description: "Conheça os principais eventos que moldaram a história do Brasil.", duration: "52min", year: "2023" },
-  { id: "4", title: "Física Moderna", thumbnail: "", ageRating: "Adulto", description: "Mergulhe nos conceitos avançados da física contemporânea.", duration: "1h 15min", year: "2024" },
-  { id: "5", title: "Inglês Avançado", thumbnail: "", ageRating: "Adulto", description: "Domine o inglês com técnicas avançadas de conversação.", duration: "1h 5min", year: "2023" },
+  { id: "1", title: "Matemática Básica", thumbnail: "", ageRating: "Infantil", description: "Aprenda os fundamentos da matemática de forma divertida e interativa.", duration: "45min", year: "2024", isInteractive: false },
+  { id: "2", title: "Ciências Naturais", thumbnail: "", ageRating: "Infantil", description: "Explore o mundo natural e descubra as maravilhas da ciência.", duration: "38min", year: "2024", isInteractive: false },
+  { id: "3", title: "História do Brasil", thumbnail: "", ageRating: "Jovem", description: "Conheça os principais eventos que moldaram a história do Brasil.", duration: "52min", year: "2023", isInteractive: false },
+  { id: "4", title: "Física Moderna", thumbnail: "", ageRating: "Adulto", description: "Mergulhe nos conceitos avançados da física contemporânea.", duration: "1h 15min", year: "2024", isInteractive: false },
+  { id: "5", title: "Inglês Avançado", thumbnail: "", ageRating: "Adulto", description: "Domine o inglês com técnicas avançadas de conversação.", duration: "1h 5min", year: "2023", isInteractive: false },
+  { id: "6", title: "Programação Python - Interativo", thumbnail: "", ageRating: "Adulto", description: "Aprenda Python de forma interativa com desafios de código em tempo real durante o vídeo.", duration: "1h 30min", year: "2024", isInteractive: true },
+  { id: "7", title: "JavaScript Básico - Interativo", thumbnail: "", ageRating: "Jovem", description: "Aprenda os fundamentos do JavaScript com perguntas práticas durante a aula.", duration: "50min", year: "2024", isInteractive: true },
 ];
+
+const interactiveQuestions = {
+  "6": [
+    {
+      id: "q1",
+      time: 30,
+      question: "Qual é a palavra-chave usada para definir uma função em Python?",
+      options: ["function", "def", "func", "define"],
+      correctAnswer: 1,
+      explanation: "Em Python, usamos 'def' para definir funções. Exemplo: def minha_funcao():"
+    },
+    {
+      id: "q2",
+      time: 90,
+      question: "Como você imprime 'Olá Mundo' em Python?",
+      options: ["echo('Olá Mundo')", "print('Olá Mundo')", "console.log('Olá Mundo')", "write('Olá Mundo')"],
+      correctAnswer: 1,
+      explanation: "A função print() é usada para exibir texto no console em Python."
+    },
+    {
+      id: "q3",
+      time: 150,
+      question: "Qual tipo de dados é usado para armazenar números decimais em Python?",
+      options: ["int", "decimal", "float", "double"],
+      correctAnswer: 2,
+      explanation: "O tipo 'float' é usado para números com casas decimais em Python."
+    }
+  ],
+  "7": [
+    {
+      id: "q1",
+      time: 25,
+      question: "Como você declara uma variável em JavaScript?",
+      options: ["var nome = 'João'", "variable nome = 'João'", "let nome := 'João'", "string nome = 'João'"],
+      correctAnswer: 0,
+      explanation: "Em JavaScript, usamos var, let ou const para declarar variáveis."
+    },
+    {
+      id: "q2",
+      time: 70,
+      question: "Qual método é usado para adicionar um elemento ao final de um array?",
+      options: ["add()", "append()", "push()", "insert()"],
+      correctAnswer: 2,
+      explanation: "O método push() adiciona um ou mais elementos ao final de um array."
+    }
+  ]
+};
 
 const VideoDetail = () => {
   const { id } = useParams();
@@ -23,6 +73,7 @@ const VideoDetail = () => {
   const video = mockVideos.find(v => v.id === id);
   const [rating, setRating] = useState(ratings.find(r => r.videoId === id)?.rating || 0);
   const isInWatchLater = watchLater.some(v => v.id === id);
+  const [activeTab, setActiveTab] = useState<'overview' | 'info'>('overview');
 
   if (!video) {
     return (
@@ -78,11 +129,17 @@ const VideoDetail = () => {
     });
   };
 
+  const [showPlayer, setShowPlayer] = useState(false);
+
   const handlePlay = () => {
-    toast({
-      title: "Reproduzindo vídeo",
-      description: "O player será implementado em breve",
-    });
+    if (video.isInteractive) {
+      setShowPlayer(true);
+    } else {
+      toast({
+        title: "Reproduzindo vídeo",
+        description: "O player será implementado em breve",
+      });
+    }
   };
 
   return (
@@ -110,9 +167,17 @@ const VideoDetail = () => {
           </Button>
 
           <div className="max-w-2xl">
-            <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-4">
-              {video.title}
-            </h1>
+            <div className="flex items-center gap-3 mb-4">
+              <h1 className="text-4xl md:text-6xl font-bold text-foreground">
+                {video.title}
+              </h1>
+              {video.isInteractive && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/20 text-primary text-sm font-semibold">
+                  <Code className="h-4 w-4" />
+                  Interativo
+                </span>
+              )}
+            </div>
             
             <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6">
               <span className="text-primary font-semibold">{rating > 0 ? `${rating}★` : "Não avaliado"}</span>
@@ -177,12 +242,136 @@ const VideoDetail = () => {
         </div>
       </div>
 
-      {/* Related Content */}
-      {relatedVideos.length > 0 && (
-        <div className="pb-8">
-          <VideoRow title="Conteúdos Relacionados" videos={relatedVideos} />
+      {/* Main Content */}
+      <div className="container mx-auto px-4 pb-16 -mt-32 relative z-20">
+        {/* Interactive Player */}
+        {showPlayer && video.isInteractive && (
+          <div className="mb-8">
+            <InteractiveVideoPlayer 
+              videoId={video.id}
+              questions={interactiveQuestions[video.id as keyof typeof interactiveQuestions] || []}
+            />
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="bg-background/80 backdrop-blur-sm rounded-lg p-6 md:p-8 border border-border">
+          {/* Tabs */}
+          <div className="flex gap-8 border-b border-border mb-6">
+            <button 
+              onClick={() => setActiveTab('overview')}
+              className={`pb-4 px-2 transition-colors ${
+                activeTab === 'overview' 
+                  ? 'text-foreground border-b-2 border-primary font-semibold' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Visão Geral
+            </button>
+            <button 
+              onClick={() => setActiveTab('info')}
+              className={`pb-4 px-2 transition-colors ${
+                activeTab === 'info' 
+                  ? 'text-foreground border-b-2 border-primary font-semibold' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Informações
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-semibold text-foreground mb-3">Sobre</h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  {video.description}
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <span className="text-muted-foreground text-sm">Duração</span>
+                  <p className="text-foreground font-medium">{video.duration}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-sm">Ano</span>
+                  <p className="text-foreground font-medium">{video.year}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-sm">Classificação</span>
+                  <p className="text-foreground font-medium">{video.ageRating}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-sm">Avaliação</span>
+                  <div className="flex items-center gap-1">
+                    <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                    <span className="text-foreground font-medium">
+                      {rating > 0 ? rating : "Não avaliado"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {video.isInteractive && (
+                <div className="mt-6 p-4 bg-primary/10 border border-primary/30 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Code className="h-5 w-5 text-primary shrink-0 mt-1" />
+                    <div>
+                      <h4 className="text-foreground font-semibold mb-1">Conteúdo Interativo</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Este vídeo contém perguntas interativas que pausarão automaticamente a reprodução 
+                        para testar seu conhecimento. Responda corretamente para avançar no aprendizado!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'info' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-semibold text-foreground mb-3">Informações Detalhadas</h3>
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-muted-foreground">Título Original:</span>
+                    <p className="text-foreground">{video.title}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Sinopse Completa:</span>
+                    <p className="text-foreground leading-relaxed">{video.description}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Categoria:</span>
+                    <p className="text-foreground">Educacional - {video.ageRating}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Tipo:</span>
+                    <p className="text-foreground">
+                      {video.isInteractive ? "Vídeo Interativo com Perguntas" : "Vídeo Educacional"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Idioma:</span>
+                    <p className="text-foreground">Português (Brasil)</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Legendas:</span>
+                    <p className="text-foreground">Português, Inglês, Espanhol</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Qualidade Disponível:</span>
+                    <p className="text-foreground">SD, HD, 4K Ultra HD</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
