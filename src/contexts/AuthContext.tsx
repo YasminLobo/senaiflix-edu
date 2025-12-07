@@ -1,81 +1,140 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  type: "infantil" | "jovem" | "adulto";
-}
+import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from "@supabase/supabase-js";
+import { Profile, AppRole } from "@/types/database";
+import { getProfile, getUserRole } from "@/lib/supabase-helpers";
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  signup: (email: string, password: string, name: string, type: User["type"]) => Promise<boolean>;
-  logout: () => void;
+  profile: Profile | null;
+  session: Session | null;
+  login: (email: string, password: string) => Promise<{ error: string | null }>;
+  signup: (email: string, password: string, name: string, type: Profile["age_group"]) => Promise<{ error: string | null }>;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
+  isAdmin: boolean;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("senaiflix_user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Defer profile fetch with setTimeout to avoid deadlock
+        if (session?.user) {
+          setTimeout(() => {
+            fetchProfile(session.user.id);
+            checkAdminRole(session.user.id);
+          }, 0);
+        } else {
+          setProfile(null);
+          setIsAdmin(false);
+          setLoading(false);
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        fetchProfile(session.user.id);
+        checkAdminRole(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    const usersData = localStorage.getItem("senaiflix_users");
-    const users: Array<User & { password: string }> = usersData ? JSON.parse(usersData) : [];
-    
-    const foundUser = users.find(u => u.email === email && u.password === password);
-    
-    if (foundUser) {
-      const { password: _, ...userWithoutPassword } = foundUser;
-      setUser(userWithoutPassword);
-      localStorage.setItem("senaiflix_user", JSON.stringify(userWithoutPassword));
-      return true;
+  const fetchProfile = async (userId: string) => {
+    const { data } = await getProfile(userId);
+    if (data) {
+      setProfile(data);
     }
-    
-    return false;
+    setLoading(false);
   };
 
-  const signup = async (email: string, password: string, name: string, type: User["type"]): Promise<boolean> => {
-    const usersData = localStorage.getItem("senaiflix_users");
-    const users: Array<User & { password: string }> = usersData ? JSON.parse(usersData) : [];
-    
-    if (users.find(u => u.email === email)) {
-      return false;
-    }
-    
-    const newUser = {
-      id: Date.now().toString(),
+  const checkAdminRole = async (userId: string) => {
+    const { data } = await getUserRole(userId, 'admin');
+    setIsAdmin(!!data);
+  };
+
+  const login = async (email: string, password: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
-      name,
-      type
-    };
-    
-    users.push(newUser);
-    localStorage.setItem("senaiflix_users", JSON.stringify(users));
-    
-    const { password: _, ...userWithoutPassword } = newUser;
-    setUser(userWithoutPassword);
-    localStorage.setItem("senaiflix_user", JSON.stringify(userWithoutPassword));
-    
-    return true;
+    });
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    return { error: null };
   };
 
-  const logout = () => {
+  const signup = async (
+    email: string, 
+    password: string, 
+    name: string, 
+    type: Profile["age_group"]
+  ): Promise<{ error: string | null }> => {
+    const redirectUrl = `${window.location.origin}/`;
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: {
+          full_name: name,
+          age_group: type
+        }
+      }
+    });
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    return { error: null };
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem("senaiflix_user");
+    setSession(null);
+    setProfile(null);
+    setIsAdmin(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile,
+      session,
+      login, 
+      signup, 
+      logout, 
+      isAuthenticated: !!user,
+      isAdmin,
+      loading 
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
 import { Users, Video, Eye, HardDrive } from "lucide-react";
+import { countProfiles, countVideos, countWatchProgress, getVideosDuration, getProfilesAgeGroup } from "@/lib/supabase-helpers";
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -16,59 +16,24 @@ const AdminDashboard = () => {
   }, []);
 
   const loadStats = async () => {
-    // Count profiles
-    const { count: usersCount } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true });
-
-    // Count videos
-    const { count: videosCount } = await supabase
-      .from('videos')
-      .select('*', { count: 'exact', head: true });
-
-    // Count watch progress entries (views)
-    const { count: viewsCount } = await supabase
-      .from('watch_progress')
-      .select('*', { count: 'exact', head: true });
-
-    // Get storage usage (approximate)
-    const { data: videos } = await supabase
-      .from('videos')
-      .select('video_url');
+    const { count: usersCount } = await countProfiles();
+    const { count: videosCount } = await countVideos();
+    const { count: viewsCount } = await countWatchProgress();
+    const { data: videos } = await getVideosDuration();
 
     setStats({
       totalUsers: usersCount || 0,
       totalVideos: videosCount || 0,
       totalViews: viewsCount || 0,
-      storageUsed: videos?.length || 0 // Simplified - should calculate actual size
+      storageUsed: videos?.length || 0
     });
   };
 
   const statsCards = [
-    {
-      title: "Total de Usuários",
-      value: stats.totalUsers,
-      icon: Users,
-      description: "Usuários registrados"
-    },
-    {
-      title: "Total de Vídeos",
-      value: stats.totalVideos,
-      icon: Video,
-      description: "Vídeos no catálogo"
-    },
-    {
-      title: "Total de Visualizações",
-      value: stats.totalViews,
-      icon: Eye,
-      description: "Vídeos assistidos"
-    },
-    {
-      title: "Armazenamento",
-      value: `${stats.storageUsed} vídeos`,
-      icon: HardDrive,
-      description: "Espaço utilizado"
-    }
+    { title: "Total de Usuários", value: stats.totalUsers, icon: Users, description: "Usuários registrados" },
+    { title: "Total de Vídeos", value: stats.totalVideos, icon: Video, description: "Vídeos no catálogo" },
+    { title: "Total de Visualizações", value: stats.totalViews, icon: Eye, description: "Vídeos assistidos" },
+    { title: "Armazenamento", value: `${stats.storageUsed} vídeos`, icon: HardDrive, description: "Espaço utilizado" }
   ];
 
   return (
@@ -79,32 +44,23 @@ const AdminDashboard = () => {
           return (
             <Card key={stat.title} className="bg-card border-border">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-card-foreground">
-                  {stat.title}
-                </CardTitle>
+                <CardTitle className="text-sm font-medium text-card-foreground">{stat.title}</CardTitle>
                 <Icon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stat.description}
-                </p>
+                <p className="text-xs text-muted-foreground">{stat.description}</p>
               </CardContent>
             </Card>
           );
         })}
       </div>
-
       <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-foreground">Distribuição por Faixa Etária</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Usuários divididos por categoria
-          </CardDescription>
+          <CardDescription className="text-muted-foreground">Usuários divididos por categoria</CardDescription>
         </CardHeader>
-        <CardContent>
-          <AgeGroupDistribution />
-        </CardContent>
+        <CardContent><AgeGroupDistribution /></CardContent>
       </Card>
     </div>
   );
@@ -113,15 +69,10 @@ const AdminDashboard = () => {
 const AgeGroupDistribution = () => {
   const [distribution, setDistribution] = useState<Record<string, number>>({});
 
-  useEffect(() => {
-    loadDistribution();
-  }, []);
+  useEffect(() => { loadDistribution(); }, []);
 
   const loadDistribution = async () => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('age_group');
-
+    const { data } = await getProfilesAgeGroup();
     if (data) {
       const dist = data.reduce((acc, profile) => {
         acc[profile.age_group] = (acc[profile.age_group] || 0) + 1;
@@ -138,10 +89,7 @@ const AgeGroupDistribution = () => {
           <span className="text-foreground capitalize">{ageGroup}</span>
           <div className="flex items-center gap-4">
             <div className="w-48 bg-secondary rounded-full h-2">
-              <div
-                className="bg-primary h-2 rounded-full"
-                style={{ width: `${(count / Object.values(distribution).reduce((a, b) => a + b, 0)) * 100}%` }}
-              />
+              <div className="bg-primary h-2 rounded-full" style={{ width: `${(count / Object.values(distribution).reduce((a, b) => a + b, 0)) * 100}%` }} />
             </div>
             <span className="text-foreground font-semibold w-12 text-right">{count}</span>
           </div>

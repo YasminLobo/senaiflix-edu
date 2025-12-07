@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Play, Pause } from "lucide-react";
+import { getWatchProgress, upsertWatchProgress } from "@/lib/supabase-helpers";
 
 interface HLSPlayerProps {
   videoId: string;
@@ -17,7 +17,6 @@ const HLSPlayer = ({ videoId, videoUrl }: HLSPlayerProps) => {
   const progressIntervalRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
-    // Load saved progress
     if (user) {
       loadProgress();
     }
@@ -32,12 +31,7 @@ const HLSPlayer = ({ videoId, videoUrl }: HLSPlayerProps) => {
   const loadProgress = async () => {
     if (!user) return;
 
-    const { data } = await supabase
-      .from('watch_progress')
-      .select('progress_seconds, duration_seconds')
-      .eq('video_id', videoId)
-      .eq('user_id', user.id)
-      .maybeSingle();
+    const { data } = await getWatchProgress(user.id, videoId);
 
     if (data && videoRef.current) {
       videoRef.current.currentTime = data.progress_seconds;
@@ -51,17 +45,13 @@ const HLSPlayer = ({ videoId, videoUrl }: HLSPlayerProps) => {
     const currentTime = videoRef.current.currentTime;
     const duration = videoRef.current.duration;
 
-    await supabase
-      .from('watch_progress')
-      .upsert({
-        user_id: user.id,
-        video_id: videoId,
-        progress_seconds: currentTime,
-        duration_seconds: duration,
-        completed: currentTime >= duration * 0.95
-      }, {
-        onConflict: 'user_id,video_id'
-      });
+    await upsertWatchProgress({
+      user_id: user.id,
+      video_id: videoId,
+      progress_seconds: currentTime,
+      duration_seconds: duration,
+      completed: currentTime >= duration * 0.95
+    });
   };
 
   const handlePlay = () => {
@@ -74,7 +64,6 @@ const HLSPlayer = ({ videoId, videoUrl }: HLSPlayerProps) => {
         }
       } else {
         videoRef.current.play();
-        // Save progress every 10 seconds
         progressIntervalRef.current = setInterval(() => {
           saveProgress();
         }, 10000);
