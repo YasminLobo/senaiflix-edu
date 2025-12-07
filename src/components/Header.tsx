@@ -13,12 +13,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Header = () => {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, profile, logout, isAuthenticated } = useAuth();
   const { userPlan, watchLater, plans } = usePlan();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/auth");
   };
 
@@ -53,8 +53,8 @@ const Header = () => {
                 <DropdownMenuContent align="end" className="w-56 bg-popover border-border">
                   <DropdownMenuLabel className="text-popover-foreground">
                     <div>
-                      <p className="font-semibold">{user.name}</p>
-                      <p className="text-sm text-muted-foreground">{user.type}</p>
+                      <p className="font-semibold">{profile?.full_name || user.email}</p>
+                      <p className="text-sm text-muted-foreground">{profile?.age_group || 'adulto'}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-border" />
